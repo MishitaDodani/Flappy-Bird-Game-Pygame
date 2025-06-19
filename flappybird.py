@@ -1,6 +1,17 @@
 import pygame
 import pygame.image
 import random
+import os
+
+high_score_file = "highscore.txt"
+
+# Read high score from file if it exists
+if os.path.exists(high_score_file):
+    with open(high_score_file, "r") as f:
+        high_score = int(f.read())
+
+else:
+    high_score = 0
 
 #game variables
 GAME_WIDTH = 360
@@ -54,16 +65,21 @@ def draw():
     for pipe in pipes:
         window.blit(pipe.img, pipe)
 
+    # score
     text_str = str(int(score))
     if game_over:
         text_str = "Game Over: " + text_str
 
-    text_font = pygame.font.SysFont("Comic Sans MS", 40)
-    text_render = text_font.render(text_str, True, "white")
+    text_font = pygame.font.SysFont("Comic Sans MS", 20)
+    text_render = text_font.render(text_str, True, "black")
     window.blit(text_render, (5, 0))
 
+    # high score
+    high_score_text = text_font.render("High Score: " + str(int(high_score)), True, "black")
+    window.blit(high_score_text, (GAME_WIDTH - high_score_text.get_width() - 10, 0))
+
 def move():
-    global velocity_y, score, game_over
+    global velocity_y, score, game_over, high_score
     velocity_y += gravity
     bird.y += velocity_y
     bird.y = max(bird.y, 0)
@@ -78,6 +94,12 @@ def move():
         if not pipe.passed and bird.x > pipe.x + pipe.width:
             score += 0.5 #0.5 bcoz there are 2 pipes! 0.5*2 = 1, 1 per set of pipes
             pipe.passed = True
+            
+            if score > high_score:
+                high_score = score
+                # Save new high score to file
+                with open(high_score_file, "w") as f:
+                    f.write(str(int(high_score)))
 
         if bird.colliderect(pipe):
             game_over = True
@@ -106,6 +128,9 @@ clock = pygame.time.Clock()
 create_pipes_timer = pygame.USEREVENT + 0
 pygame.time.set_timer(create_pipes_timer, 1500) # marks every 1.5 seconds
 
+increase_difficulty_timer = pygame.USEREVENT + 1
+pygame.time.set_timer(increase_difficulty_timer, 10000)
+
 while True: #game loop
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -114,6 +139,10 @@ while True: #game loop
             
         if event.type == create_pipes_timer and not game_over:
             create_pipes()
+
+        # increase difficulty over time
+        if event.type == increase_difficulty_timer and not game_over:
+            velocity_x -= 0.2
 
         if event.type == pygame.KEYDOWN:
             if event.key in (pygame.K_SPACE, pygame.K_x, pygame.K_UP):
@@ -125,6 +154,7 @@ while True: #game loop
                     pipes.clear()
                     score = 0
                     game_over = False
+                    velocity_x = -2
       
     if not game_over:
         move()      
